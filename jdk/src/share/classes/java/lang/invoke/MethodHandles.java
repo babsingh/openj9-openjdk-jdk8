@@ -30,6 +30,7 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Objects;
 
 import sun.invoke.util.ValueConversions;
 import sun.invoke.util.VerifyAccess;
@@ -683,7 +684,7 @@ public class MethodHandles {
                         (name.startsWith("sun.")
                                 && !name.startsWith("sun.invoke.")
                                 && !name.equals("sun.reflect.ReflectionFactory"))) {
-                    throw newIllegalArgumentException("illegal lookupClass: " + lookupClass);
+       //             throw newIllegalArgumentException("illegal lookupClass: " + lookupClass);
                 }
             }
         }
@@ -1400,6 +1401,12 @@ return mh1;
             Class<?> caller = lookupClassOrNull();
             if (caller != null && !VerifyAccess.isClassAccessible(refc, caller, allowedModes))
                 throw new MemberName(refc).makeAccessException("symbolic reference class is not public", this);
+        }
+
+        boolean isClassAccessible(Class<?> refc) {
+            refc.getClass();  // NPE
+            Class<?> caller = lookupClassOrNull();
+            return caller == null || VerifyAccess.isClassAccessible(refc, caller, allowedModes);
         }
 
         /** Check name for an illegal leading "&lt;" character. */
@@ -2768,7 +2775,11 @@ assertEquals("[top, [[up, down, strange], charm], bottom]",
         MethodType filterType = filter.type();
         Class<?> rtype = filterType.returnType();
         List<Class<?>> filterArgs = filterType.parameterList();
-        if (rtype == void.class) {
+        if (pos < 0 || (rtype == void.class && pos > targetType.parameterCount()) ||
+                       (rtype != void.class && pos >= targetType.parameterCount())) {
+            throw newIllegalArgumentException("position is out of range for target", target, pos);
+        }
+	if (rtype == void.class) {
             return targetType.insertParameterTypes(pos, filterArgs);
         }
         if (rtype != targetType.parameterType(pos)) {
